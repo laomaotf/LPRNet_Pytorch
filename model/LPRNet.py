@@ -87,3 +87,10 @@ def build_lprnet(lpr_max_len=8, phase=False, class_num=66, dropout_rate=0.5):
         return Net.train()
     else:
         return Net.eval()
+
+if __name__=="__main__":
+    net = build_lprnet()
+    data = torch.zeros((2,3,24,94))
+    output = net(data)
+    print(net)
+    print(data.shape, output.shape)

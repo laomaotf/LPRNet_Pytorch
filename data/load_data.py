@@ -1,5 +1,6 @@
+import numpy
 from torch.utils.data import *
-from imutils import paths
+from imutils import paths,convenience
 import numpy as np
 import random
 import cv2
@@ -8,7 +9,7 @@ import os
 CHARS = ['京', '沪', '津', '渝', '冀', '晋', '蒙', '辽', '吉', '黑',
          '苏', '浙', '皖', '闽', '赣', '鲁', '豫', '鄂', '湘', '粤',
          '桂', '琼', '川', '贵', '云', '藏', '陕', '甘', '青', '宁',
-         '新',
+         '新', '警','广','港','澳','空',
          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
          'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K',
          'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
@@ -18,25 +19,45 @@ CHARS = ['京', '沪', '津', '渝', '冀', '晋', '蒙', '辽', '吉', '黑',
 CHARS_DICT = {char:i for i, char in enumerate(CHARS)}
 
 class LPRDataLoader(Dataset):
-    def __init__(self, img_dir, imgSize, lpr_max_len, PreprocFun=None):
+    def __init__(self, img_dir, imgSize, lpr_max_len, flag_train = False, PreprocFun=None):
+        self.flag_train = flag_train
         self.img_dir = img_dir
         self.img_paths = []
         for i in range(len(img_dir)):
             self.img_paths += [el for el in paths.list_images(img_dir[i])]
         random.shuffle(self.img_paths)
+
+        for path in self.img_paths:
+            name = os.path.splitext(os.path.basename(path))[0]
+            name = name.split("-")[0].split("_")[0]
+            for c in name:
+                if c not in CHARS_DICT.keys():
+                    print(f'not support char: {c}')
+
+
+
         self.img_size = imgSize
         self.lpr_max_len = lpr_max_len
         if PreprocFun is not None:
             self.PreprocFun = PreprocFun
         else:
-            self.PreprocFun = self.transform
+            if flag_train:
+                self.PreprocFun = self.transform_train
+            else:
+                self.PreprocFun = self.transform
 
     def __len__(self):
         return len(self.img_paths)
 
     def __getitem__(self, index):
         filename = self.img_paths[index]
-        Image = cv2.imread(filename)
+        #Image = cv2.imread(filename)
+        Image = cv2.imdecode(numpy.fromfile(filename,dtype=numpy.uint8),1)
+        if self.flag_train:
+            angle = random.uniform(-5,5)
+            Image = convenience.rotate(Image,angle,scale=1.0)
+            dx, dy = random.randint(-10,10), random.randint(-10,10) #
+            Image = convenience.translate(Image,dx,dy)
         height, width, _ = Image.shape
         if height != self.img_size[1] or width != self.img_size[0]:
             Image = cv2.resize(Image, self.img_size)
@@ -58,6 +79,13 @@ class LPRDataLoader(Dataset):
 
         return Image, label, len(label)
 
+    def transform_train(self,img):
+        if random.uniform(0,1) > 0.5:
+            img = cv2.GaussianBlur(img,(3,3),0.5)
+        if random.uniform(0,1) > 0.5:
+            gamma = random.uniform(0.7,1.3)
+            img = np.clip( np.power( img.astype(np.float32) / 255, gamma ) * 255, 0, 255).astype(np.uint8)
+        return self.transform(img)
     def transform(self, img):
         img = img.astype('float32')
         img -= 127.5

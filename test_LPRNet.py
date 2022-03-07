@@ -25,15 +25,15 @@ import os
 def get_parser():
     parser = argparse.ArgumentParser(description='parameters to train net')
     parser.add_argument('--img_size', default=[94, 24], help='the image size')
-    parser.add_argument('--test_img_dirs', default="./data/test", help='the test images path')
+    parser.add_argument('--test_img_dirs', default=r"D:\dataset\lpr\ocr\test", help='the test images path')
     parser.add_argument('--dropout_rate', default=0, help='dropout rate.')
     parser.add_argument('--lpr_max_len', default=8, help='license plate number max length.')
-    parser.add_argument('--test_batch_size', default=100, help='testing batch size.')
+    parser.add_argument('--test_batch_size', default=1, help='testing batch size.')
     parser.add_argument('--phase_train', default=False, type=bool, help='train or test phase flag.')
-    parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+    parser.add_argument('--num_workers', default=1, type=int, help='Number of workers used in dataloading')
     parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
-    parser.add_argument('--show', default=False, type=bool, help='show test image and its predict result or not.')
-    parser.add_argument('--pretrained_model', default='./weights/Final_LPRNet_model.pth', help='pretrained base model')
+    parser.add_argument('--show', default=True, type=bool, help='show test image and its predict result or not.')
+    parser.add_argument('--pretrained_model', default='./weights/LPRNet__iteration_10000.pth', help='pretrained base model')
 
     args = parser.parse_args()
 
@@ -114,7 +114,7 @@ def Greedy_Decode_Eval(Net, datasets, args):
             no_repeat_blank_label = list()
             pre_c = preb_label[0]
             if pre_c != len(CHARS) - 1:
-                no_repeat_blank_label.append(pre_c)
+                no_repeat_blank_label.append(pre_c) #最后一个字符是空白字符
             for c in preb_label: # dropout repeate label and blank label
                 if (pre_c == c) or (c == len(CHARS) - 1):
                     if c == len(CHARS) - 1:
@@ -122,7 +122,7 @@ def Greedy_Decode_Eval(Net, datasets, args):
                     continue
                 no_repeat_blank_label.append(c)
                 pre_c = c
-            preb_labels.append(no_repeat_blank_label)
+            preb_labels.append(no_repeat_blank_label) #删除空白字符和重复的字符
         for i, label in enumerate(preb_labels):
             # show image and its predict label
             if args.show:
